@@ -11,6 +11,3 @@ type = authenticated
 
 [storage]
 filesystem_folder = /share/radicale/
-
-[logging]
-config = /etc/radicale/logging
