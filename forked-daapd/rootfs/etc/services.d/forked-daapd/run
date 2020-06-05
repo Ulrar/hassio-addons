@@ -1,0 +1,10 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# JPD Hass.io Add-ons: forked-daapd server
+# Runs the forked-daapd Server
+# ==============================================================================
+# shellcheck disable=SC1091
+
+bashio::log.info 'Starting the forked-daapd Server...'
+# Run forked-daapd
+exec forked-daapd -f -c /share/forked-daapd/forked-daapd.conf -P /var/run/forked-daapd.pid

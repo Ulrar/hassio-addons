@@ -1,0 +1,41 @@
+{
+  "name": "Forked DAAPD",
+  "version": "dev",
+  "slug": "forked-daapd",
+  "panel_icon": "mdi:music-circle",
+  "description": "Linux/FreeBSD DAAP (iTunes) and MPD media server with support for AirPlay devices (multiroom), Apple Remote (and compatibles), Chromecast, Spotify and internet radio.",
+  "url": "https://github.com/ulrar/addon-forked-daapd",
+  "webui": "http://[HOST]:[PORT:80]/",
+  "ingress": true,
+  "ingress_port": 3689,
+  "ingress_entry": "/",
+  "startup": "application",
+  "arch": [
+    "armv7"
+  ],
+  "boot": "auto",
+  "hassio_api": false,
+  "auth_api": true,
+  "hassio_role": "default",
+  "audio": true,
+  "host_network": false,
+  "host_dbus": true,
+  "host_ipc": false,
+  "ports": {
+    "3688/tcp": 3688,
+    "6600/tcp": 6600,
+    "5353/tcp": 5353,
+    "3689/tcp": 3689
+  },
+  "ports_description": {
+    "3688/tcp": "Websockets",
+    "6600/tcp": "MPD",
+    "5353/tcp": "Avahi",
+    "3689/tcp": "DAAP"
+  },
+  "map": [
+    "share:rw"
+  ],
+  "options": {},
+  "schema": {}
+}
