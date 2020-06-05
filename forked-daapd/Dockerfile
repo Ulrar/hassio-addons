@@ -1,6 +1,6 @@
 ARG BUILD_FROM=hassioaddons/debian-base:3.0.0
 # hadolint ignore=DL3006
-FROM ${BUILD_FROM}
+FROM ${BUILD_FROM} as base
 
 ENV BUILD_DEPS \
     autoconf \
@@ -72,6 +72,9 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 RUN curl -L https://apt.mopidy.com/mopidy.list -o /etc/apt/sources.list.d/mopidy.list \
     && curl -L https://apt.mopidy.com/mopidy.gpg -o /tmp/mopidy.gpg \
     && apt-key add /tmp/mopidy.gpg
+
+
+FROM base AS builder
 RUN mkdir -p /usr/share/man/man1
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     ${BUILD_DEPS} \
@@ -92,8 +95,16 @@ RUN git clone --depth 1 https://github.com/ejurgensen/forked-daapd.git . \
     --enable-spotify \
     --with-libwebsockets \
     && make \
-    && make install
+	&& make install DESTDIR=/tmp/forked-daapd-install
 
+
+FROM base AS runner
+COPY --from=builder /usr/local/bin/antlr3 /usr/local/bin/antlr3
+RUN chmod 775 /usr/local/bin/antlr3
+COPY --from=builder /tmp/forked-daapd-install /
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    ${RUN_DEPS} \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /usr/local/etc
 RUN sed -i -e 's/\(uid.*=.*\)/uid = "root"/g' forked-daapd.conf \
     && sed -i s#"ipv6 = yes"#"ipv6 = no"#g forked-daapd.conf \
@@ -106,11 +117,6 @@ RUN sed -i -e 's/\(uid.*=.*\)/uid = "root"/g' forked-daapd.conf \
     && sed -i "/pipe_autostart\ =/ s/# *//" forked-daapd.conf \
     && sed -i "/db_path\ =/ s/# *//" forked-daapd.conf \
     && sed -i "/cache_path\ =/ s/# *//" forked-daapd.conf
-
-RUN apt-get remove -y ${BUILD_DEPS} && apt-get autoremove -y
-RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    ${RUN_DEPS} \
-    && rm -rf /var/lib/apt/lists/*
 
 # Copy root filesystem
 COPY rootfs /
