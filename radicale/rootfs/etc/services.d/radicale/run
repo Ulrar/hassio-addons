@@ -1,0 +1,9 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Radicale addon
+# ==============================================================================
+declare -a options
+
+bashio::log.info "Starting Radicale ..."
+
+radicale --config /etc/radicale/config
