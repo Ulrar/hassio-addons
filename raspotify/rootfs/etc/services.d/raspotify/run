@@ -1,0 +1,26 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# JPD Hass.io Add-ons: raspotify server
+# Runs the raspotify Server
+# ==============================================================================
+# shellcheck disable=SC1091
+
+bashio::log.info 'Starting the raspotify Server...'
+# Run raspotify
+
+DEVICE_NAME="$(bashio::config 'name')"
+BACKEND_ARGS="$(bashio::config 'backend')"
+BITRATE="$(bashio::config 'bitrate')"
+OPTIONS="$(bashio::config 'extra_options')"
+
+USERNAME="$(bashio::config 'username')"
+PASSWORD="$(bashio::config 'password')"
+
+VOLUME_ARGS="--enable-volume-normalisation --linear-volume --initial-volume=100"
+
+if [ ! -z ${USERNAME} ] && [ ! -z ${PASSWORD} ]
+then
+	OPTIONS='--username '"${USERNAME}"' --password '"${PASSWORD}"' '"${OPTIONS}"
+fi
+
+exec /usr/bin/librespot --name "${DEVICE_NAME}" $BACKEND_ARGS --bitrate ${BITRATE} $VOLUME_ARGS $OPTIONS

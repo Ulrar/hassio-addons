@@ -1,0 +1,44 @@
+{
+  "name": "Raspotify",
+  "version": "dev",
+  "slug": "raspotify",
+  "panel_icon": "mdi:music-circle",
+  "description": "Spotify Connect client for the Raspberry Pi that Just Works",
+  "url": "https://github.com/Ulrar/hassio-addons",
+  "stage": "experimental",
+  "ingress": false,
+  "startup": "application",
+  "arch": [
+    "armv7"
+  ],
+  "boot": "auto",
+  "apparmor": true,
+  "hassio_api": false,
+  "auth_api": false,
+  "hassio_role": "default",
+  "audio": true,
+  "host_network": true,
+  "host_dbus": true,
+  "host_ipc": false,
+  "ports": {},
+  "ports_description": {},
+  "map": [
+    "share:rw"
+  ],
+  "options": {
+    "name": "raspotify",
+    "bitrate": 160,
+    "username": "",
+    "password": "",
+    "extra_options": "",
+    "backend": "--backend alsa"
+  },
+  "schema": {
+    "name": "str",
+    "bitrate": "int",
+    "username": "str?",
+    "password": "str?",
+    "extra_options": "str?",
+    "backend": "str"
+  }
+}
