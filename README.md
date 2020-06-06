@@ -6,6 +6,16 @@ The defaults should work fine for most uses.
 
 Note that ingress does not work, but you can access the web interface on port 3689.
 
+/!\ You should use pulseaudio as the output type for local playback :
+
+```
+audio {
+...
+	type = "pulseaudio"
+...
+}
+```
+
 # Raspotify
 
 Spotify connect server, see [the github page](https://github.com/dtcooper/raspotify) for more info.
