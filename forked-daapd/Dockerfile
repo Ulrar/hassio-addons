@@ -99,8 +99,6 @@ RUN git clone --depth 1 https://github.com/ejurgensen/forked-daapd.git . \
 
 
 FROM base AS runner
-COPY --from=builder /usr/local/bin/antlr3 /usr/local/bin/antlr3
-RUN chmod 775 /usr/local/bin/antlr3
 COPY --from=builder /tmp/forked-daapd-install /
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     ${RUN_DEPS} \
