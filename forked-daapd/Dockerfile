@@ -9,7 +9,6 @@ ENV BUILD_DEPS libcurl4-gnutls-dev \
 	       libprotobuf-c-dev \
 	       libplist-dev \
 	       libsodium-dev \
-	       libsodium-dev \
 	       libpulse-dev \
 	       autotools-dev \
 	       git \
@@ -50,6 +49,7 @@ ENV RUN_DEPS   libpulse0 \
 	       libswscale5 \
 	       libavutil56 \
 	       libasound2 \
+           libasound2-plugins \
 	       libmxml1 \
 	       libgcrypt20 \
 	       libavahi-client3 \
