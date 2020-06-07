@@ -9,6 +9,7 @@
   "ingress": false,
   "startup": "application",
   "arch": [
+    "aarch64",
     "armv7"
   ],
   "boot": "auto",
