@@ -16,6 +16,8 @@ audio {
 }
 ```
 
+Note that Spotify support is not available on `aarch64`.
+
 # Raspotify
 
 Spotify connect server, see [the github page](https://github.com/dtcooper/raspotify) for more info.
