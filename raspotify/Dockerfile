@@ -5,7 +5,7 @@ FROM ${BUILD_FROM}
 ARG BUILD_ARCH
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    curl apt-transport-https gnupg2 dirmngr \
+    curl apt-transport-https gnupg2 dirmngr libasound2-plugins \
     && rm -rf /var/lib/apt/lists/*
 RUN curl -sSL https://dtcooper.github.io/raspotify/key.asc | apt-key add -v -
 RUN echo 'deb https://dtcooper.github.io/raspotify raspotify main' | cat > /etc/apt/sources.list.d/raspotify.list
