@@ -5,22 +5,47 @@
 # ==============================================================================
 # shellcheck disable=SC1091
 
-bashio::log.info 'Starting the raspotify Server...'
 # Run raspotify
-
 DEVICE_NAME="$(bashio::config 'name')"
-BACKEND_ARGS="$(bashio::config 'backend')"
 BITRATE="$(bashio::config 'bitrate')"
-OPTIONS="$(bashio::config 'extra_options')"
+BACKEND="$(bashio::config 'backend')"
 
-USERNAME="$(bashio::config 'username')"
-PASSWORD="$(bashio::config 'password')"
-
-VOLUME_ARGS="--enable-volume-normalisation --linear-volume --initial-volume=100"
-
-if [ ! -z ${USERNAME} ] && [ ! -z ${PASSWORD} ]
-then
-	OPTIONS='--username '"${USERNAME}"' --password '"${PASSWORD}"' '"${OPTIONS}"
+if bashio::config.has_value 'extra_options'; then
+	OPTIONS="$(bashio::config 'extra_options')"
+else
+	OPTIONS=""
 fi
 
-exec /usr/bin/librespot --name "${DEVICE_NAME}" $BACKEND_ARGS --bitrate ${BITRATE} $VOLUME_ARGS $OPTIONS
+if bashio::config.equals 'backend' 'pipe'; then
+	if bashio::config.exists 'device' && bashio::config.has_value 'device'; then
+		DEVICE=$(bashio::config 'device')
+		OPTIONS='--device '"${DEVICE}"' '"${OPTIONS}"
+		if [ -p "${DEVICE}" ]; then
+			bashio::log.info "Pipe '${DEVICE}' already exists - using that one."
+		else
+			if $(mkfifo -m 666 "${DEVICE}"); then
+				bashio::log.info "Created pipe at '${DEVICE}'."
+			else
+				bashio::log.error "Could not create pipe at '${DEVICE}'. Maybe a file exists at that path?"
+			fi
+		fi
+	else
+		bashio::log.error "Found 'backend: pipe' in configuration but no value for 'device'."
+	fi
+fi
+
+if bashio::config.has_value 'username' && bashio::config.has_value 'password'; then
+	OPTIONS='--username '"$(bashio::config 'username')"' --password '"$(bashio::config 'password')"' '"${OPTIONS}"
+fi
+
+if bashio::config.equals 'volume_normalisation' true; then
+	OPTIONS='--enable-volume-normalisation '"${OPTIONS}"
+fi
+OPTIONS='--linear-volume --initial-volume=100 '"${OPTIONS}"
+
+if bashio::config.equals 'log_level' 'debug'; then
+	OPTIONS='--verbose '"${OPTIONS}"
+fi
+
+bashio::log.info 'Starting the raspotify Server...'
+exec /usr/bin/librespot --name "${DEVICE_NAME}" --backend $BACKEND --bitrate ${BITRATE} ${OPTIONS}
