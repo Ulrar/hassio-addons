@@ -5,6 +5,7 @@
 # ==============================================================================
 # shellcheck disable=SC1091
 
-bashio::log.info 'Starting the forked-daapd Server...'
-# Run forked-daapd
-exec forked-daapd -f -c /share/forked-daapd/forked-daapd.conf -P /var/run/forked-daapd.pid
+if -n { s6-test $# -ne 0 }
+if -n { s6-test ${1} -eq 256 }
+
+s6-svscanctl -t /var/run/s6/services

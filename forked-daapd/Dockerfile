@@ -119,7 +119,7 @@ FROM base AS runner
 ARG BUILD_ARCH
 COPY --from=builder /tmp/forked-daapd-install /
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    ${RUN_DEPS} \
+    ${RUN_DEPS} nginx \
     && if [ ! "$BUILD_ARCH" = "aarch64" ] ; then \
         apt-get install -y --no-install-recommends \
         ${RUN_DEPS_NO_AARCH64}; \
@@ -145,6 +145,7 @@ RUN sed -i -e 's/\(uid.*=.*\)/uid = "root"/g' forked-daapd.conf \
     && sed -i "s/\(timing_port =\).*/\1 3691/" forked-daapd.conf \
     && sed -i "/type\ =/ s/#/ /" forked-daapd.conf \
     && sed -i 's/\(type =\).*/\1 "pulseaudio"/' forked-daapd.conf
+RUN mkdir -p /var/log/nginx && ln -sf /dev/stdout /var/log/nginx/access.log && ln -sf /dev/stderr /var/log/nginx/error.log
 
 # Copy root filesystem
 COPY rootfs /

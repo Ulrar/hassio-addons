@@ -7,7 +7,7 @@
   "url": "https://github.com/ulrar/addon-forked-daapd",
   "webui": "http://[HOST]:[PORT:3689]/",
   "stage": "experimental",
-  "ingress": false,
+  "ingress": true,
   "ingress_port": 1337,
   "ingress_entry": "/",
   "startup": "application",

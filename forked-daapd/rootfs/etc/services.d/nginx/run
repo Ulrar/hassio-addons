@@ -4,7 +4,11 @@
 # Runs the forked-daapd Server
 # ==============================================================================
 # shellcheck disable=SC1091
+declare -a options
 
-bashio::log.info 'Starting the forked-daapd Server...'
-# Run forked-daapd
-exec forked-daapd -f -c /share/forked-daapd/forked-daapd.conf -P /var/run/forked-daapd.pid
+# Wait for Forked-Daapd to become available
+bashio::net.wait_for 3689
+
+bashio::log.info "Starting Nginx..."
+
+exec nginx "${options[@]}"
