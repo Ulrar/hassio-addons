@@ -41,7 +41,6 @@ ENV BUILD_DEPS_NO_AARCH64 \
 ENV RUN_DEPS \
     libantlr3c-3.4-0 \
     libasound2 \
-    libasound2-plugins \
     libavahi-client3 \
     libavcodec58 \
     libavfilter7 \
