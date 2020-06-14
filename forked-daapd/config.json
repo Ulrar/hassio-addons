@@ -8,7 +8,7 @@
   "webui": "http://[HOST]:[PORT:80]/",
   "stage": "experimental",
   "ingress": false,
-  "ingress_port": 3689,
+  "ingress_port": 1337,
   "ingress_entry": "/",
   "startup": "application",
   "arch": [
@@ -29,13 +29,17 @@
     "3688/tcp": 3688,
     "6600/tcp": 6600,
     "5353/tcp": 5353,
-    "3689/tcp": 3689
+    "3689/tcp": 3689,
+    "3690/udp": 3690,
+    "3691/udp": 3691
   },
   "ports_description": {
     "3688/tcp": "Websockets",
     "6600/tcp": "MPD",
     "5353/tcp": "Avahi",
-    "3689/tcp": "DAAP"
+    "3689/tcp": "DAAP",
+    "3690/udp": "Control port - Airplay",
+    "3691/udp": "Timing port - Airplay"
   },
   "map": [
     "share:rw"
