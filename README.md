@@ -4,7 +4,8 @@ Based on [johnpdowling's addon](https://github.com/johnpdowling/hassio-addons/tr
 The configuration tab isn't implemented yet, you will need to edit the config file in /share/forked-daapd/forked-daapd.conf if you want to change anything.
 The defaults should work fine for most uses.
 
-Note that ingress does not work, but you can access the web interface on port 3689.
+Ingress should work out of the box if you're accessing home assistant directly, if you're going through a reverse proxy of some kind you'll need to redirect port 3688 for the ui's websockets.
+if you have any issues you can access the web interface on port 3689.
 
 Note that Spotify support is not available on `aarch64`.
 
