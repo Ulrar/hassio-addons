@@ -143,7 +143,9 @@ RUN sed -i -e 's/\(uid.*=.*\)/uid = "root"/g' forked-daapd.conf \
     && sed -i "/timing_port\ =/ s/#/ /" forked-daapd.conf \
     && sed -i "/timing_port/{N;s/\n#/\n/}" forked-daapd.conf \
     && sed -i "s/\(control_port =\).*/\1 3690/" forked-daapd.conf \
-    && sed -i "s/\(timing_port =\).*/\1 3691/" forked-daapd.conf
+    && sed -i "s/\(timing_port =\).*/\1 3691/" forked-daapd.conf \
+    && sed -i "/type\ =/ s/#/ /" forked-daapd.conf \
+    && sed -i 's/\(type =\).*/\1 "pulseaudio"/' forked-daapd.conf
 
 # Copy root filesystem
 COPY rootfs /
