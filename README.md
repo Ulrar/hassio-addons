@@ -6,16 +6,6 @@ The defaults should work fine for most uses.
 
 Note that ingress does not work, but you can access the web interface on port 3689.
 
-/!\ You should use pulseaudio as the output type for local playback :
-
-```
-audio {
-...
-	type = "pulseaudio"
-...
-}
-```
-
 Note that Spotify support is not available on `aarch64`.
 
 # Raspotify
