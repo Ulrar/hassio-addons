@@ -1,21 +1,44 @@
 ARG BUILD_FROM=hassioaddons/debian-base:3.0.0
 # hadolint ignore=DL3006
-FROM ${BUILD_FROM}
+FROM ${BUILD_FROM} as base
 
 ARG BUILD_ARCH
 
-RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    curl apt-transport-https gnupg2 dirmngr libasound2-plugins \
-    && rm -rf /var/lib/apt/lists/*
-RUN curl -sSL https://dtcooper.github.io/raspotify/key.asc | apt-key add -v -
-RUN echo 'deb https://dtcooper.github.io/raspotify raspotify main' | cat > /etc/apt/sources.list.d/raspotify.list
+ENV BUILD_DEPS build-essential \
+               alsa-utils      \
+               libasound2-dev  \
+               git             \
+               curl            \
+               pkg-config
 
-RUN if [ "$BUILD_ARCH" = "aarch64" ] ; then \
-        dpkg --add-architecture armhf; \
-    fi \
-    && apt-get update && apt-get install -y --no-install-recommends \
-    raspotify \
+ENV RUN_DEPS   apt-transport-https \
+               libasound2-plugins
+
+
+RUN apt-get update -y && apt-get install -y --no-install-recommends ${RUN_DEPS} \
     && rm -rf /var/lib/apt/lists/*
+
+FROM base AS builder
+ARG BUILD_ARCH
+RUN apt-get update && apt-get install -y --no-install-recommends ${BUILD_DEPS}
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH             "/root/.cargo/bin/:$PATH"
+ENV CARGO_TARGET_DIR "/usr/src/build"
+ENV CARGO_HOME       "/usr/src/build/cache"
+
+RUN git clone git://github.com/librespot-org/librespot.git /tmp/librespot
+WORKDIR /tmp/librespot
+RUN git checkout master
+
+RUN cargo build --release --no-default-features --features alsa-backend
+RUN cp -v /usr/src/build/release/librespot /usr/bin
+RUN ${BUILD_ARCH}-linux-gnu-strip /usr/bin/librespot
+
+FROM base AS runner
+ARG BUILD_ARCH
+COPY --from=builder /usr/bin/librespot /usr/bin/librespot
+
 RUN ln -sf /share/raspotify /etc/default/raspotify
 
 COPY rootfs /
