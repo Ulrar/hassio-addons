@@ -80,14 +80,21 @@ Valid Values are
 
 When choosing `backend: pipe` this specifies the file fifo pipe which this add-on writes audio to.
 
+### Option: `metadata_pipe`
+
+This specifies the pipe to write metadata to, when used with `backend: pipe` to forked-daapd this allows the forked-daapd server to display the track information instead of the pipe name.
+
 Example:
 ```yaml
 backend: pipe
 device: /share/forked-daapd/music/Raspotify
+metadata_pipe: /share/forked-daapd/music/Raspotify.metadata
 ```
 
 The Raspotify add-on tries to create the pipe at the given path or uses an already existing pipe on each start.
 If it could not create or find a pipe, there will be an error message in the add-on log. Created pipes are not deleted when changing this option.
+
+Do not forget to restart forked-daapd after starting raspotify for the first time or the pipes might not work properly.
 
 ### Option: `extra_options`
 

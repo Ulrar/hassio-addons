@@ -34,6 +34,20 @@ if bashio::config.equals 'backend' 'pipe'; then
 	fi
 fi
 
+if bashio::config.exists 'metadata_pipe' && bashio::config.has_value 'metadata_pipe'; then
+	METADATA_PIPE=$(bashio::config 'metadata_pipe')
+	OPTIONS='--metadata-pipe '"${METADATA_PIPE}"' '"${OPTIONS}"
+	if [ -p "${METADATA_PIPE}" ]; then
+		bashio::log.info "Pipe '${METADATA_PIPE}' already exists - using that one."
+	else
+		if $(mkfifo -m 666 "${METADATA_PIPE}"); then
+			bashio::log.info "Created pipe at '${METADATA_PIPE}'."
+		else
+			bashio::log.error "Could not create pipe at '${METADATA_PIPE}'. Maybe a file exists at that path?"
+		fi
+	fi
+fi
+
 if bashio::config.has_value 'username' && bashio::config.has_value 'password'; then
 	OPTIONS='--username '"$(bashio::config 'username')"' --password '"$(bashio::config 'password')"' '"${OPTIONS}"
 fi

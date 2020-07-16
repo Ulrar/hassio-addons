@@ -41,6 +41,7 @@
     "password": "password?",
     "backend": "list(alsa|pipe)",
     "device": "match(^/|(/[\\w-]+)+$)?",
+    "metadata_pipe": "match(^/|(/[\\w-]+)+$)?",
     "extra_options": "str?"
   }
 }

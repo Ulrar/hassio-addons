@@ -27,9 +27,9 @@ ENV PATH             "/root/.cargo/bin/:$PATH"
 ENV CARGO_TARGET_DIR "/usr/src/build"
 ENV CARGO_HOME       "/usr/src/build/cache"
 
-RUN git clone git://github.com/librespot-org/librespot.git /tmp/librespot
+COPY metadata-pipe.patch /tmp
+RUN git clone git://github.com/librespot-org/librespot.git /tmp/librespot && cd /tmp/librespot && git config --global user.name build && git config --global user.email "none@none.tld" && git apply /tmp/metadata-pipe.patch
 WORKDIR /tmp/librespot
-RUN git checkout master
 
 RUN cargo build --release --no-default-features --features alsa-backend
 RUN cp -v /usr/src/build/release/librespot /usr/bin

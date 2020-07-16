@@ -1,0 +1,316 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index e2ad888..207e887 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -904,6 +904,7 @@ name = "librespot-playback"
+ version = "0.1.1"
+ dependencies = [
+  "alsa 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+  "cpal 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
+  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
+diff --git a/playback/Cargo.toml b/playback/Cargo.toml
+index c0986c4..8d8186f 100644
+--- a/playback/Cargo.toml
++++ b/playback/Cargo.toml
+@@ -17,6 +17,7 @@ path = "../metadata"
+ version = "0.1.1"
+ 
+ [dependencies]
++base64 = "0.10"
+ futures = "0.1"
+ log = "0.4"
+ byteorder = "1.3"
+diff --git a/playback/src/lib.rs b/playback/src/lib.rs
+index fe00aaa..0646487 100644
+--- a/playback/src/lib.rs
++++ b/playback/src/lib.rs
+@@ -4,6 +4,7 @@ extern crate log;
+ extern crate byteorder;
+ extern crate futures;
+ extern crate shell_words;
++extern crate base64;
+ 
+ #[cfg(feature = "alsa-backend")]
+ extern crate alsa;
+diff --git a/playback/src/mixer/mod.rs b/playback/src/mixer/mod.rs
+index 4fc01b5..53ae382 100644
+--- a/playback/src/mixer/mod.rs
++++ b/playback/src/mixer/mod.rs
+@@ -9,6 +9,7 @@ pub trait Mixer: Send {
+     fn get_audio_filter(&self) -> Option<Box<dyn AudioFilter + Send>> {
+         None
+     }
++    fn set_metadata_pipe(&mut self, _metadata_pipe: Option<String>) {}
+ }
+ 
+ pub trait AudioFilter {
+@@ -40,6 +41,9 @@ impl Default for MixerConfig {
+ pub mod softmixer;
+ use self::softmixer::SoftMixer;
+ 
++pub mod pipemixer;
++use self::pipemixer::PipeMixer;
++
+ fn mk_sink<M: Mixer + 'static>(device: Option<MixerConfig>) -> Box<dyn Mixer> {
+     Box::new(M::open(device))
+ }
+@@ -47,6 +51,7 @@ fn mk_sink<M: Mixer + 'static>(device: Option<MixerConfig>) -> Box<dyn Mixer> {
+ pub fn find<T: AsRef<str>>(name: Option<T>) -> Option<fn(Option<MixerConfig>) -> Box<dyn Mixer>> {
+     match name.as_ref().map(AsRef::as_ref) {
+         None | Some("softvol") => Some(mk_sink::<SoftMixer>),
++        Some("pipe") => Some(mk_sink::<PipeMixer>),
+         #[cfg(feature = "alsa-backend")]
+         Some("alsa") => Some(mk_sink::<AlsaMixer>),
+         _ => None,
+diff --git a/playback/src/mixer/pipemixer.rs b/playback/src/mixer/pipemixer.rs
+new file mode 100644
+index 0000000..5d1bd72
+--- /dev/null
++++ b/playback/src/mixer/pipemixer.rs
+@@ -0,0 +1,56 @@
++use base64;
++use std::f32;
++use std::fs::File;
++use std::io::Write;
++use std::sync::atomic::{AtomicUsize, Ordering};
++use std::sync::Arc;
++
++use super::{Mixer, MixerConfig};
++
++#[derive(Clone)]
++pub struct PipeMixer {
++    volume: Arc<AtomicUsize>,
++    pipe: Option<String>,
++}
++
++impl Mixer for PipeMixer {
++    fn open(_: Option<MixerConfig>) -> PipeMixer {
++        PipeMixer {
++            volume: Arc::new(AtomicUsize::new(0xFFFF)),
++            pipe: None,
++        }
++    }
++    fn start(&self) {}
++    fn stop(&self) {}
++    fn volume(&self) -> u16 {
++        self.volume.load(Ordering::Relaxed) as u16
++    }
++    fn set_volume(&self, volume: u16) {
++        self.volume.store(volume as usize, Ordering::Relaxed);
++
++        if let Some(path) = self.pipe.as_ref() {
++            let vol = volume;
++            let metadata_vol = if vol == 0 {
++                -144.0f32
++            } else if vol == 1 {
++                -30.0f32
++            } else if vol == 0xFFFF {
++                0.0f32
++            } else {
++                ((vol as f32) - (0xFFFF as f32)) * 30.0f32 / (0xFFFE as f32)
++            };
++
++            let vol_string = format!("{:.*},0.00,0.00,0.00", 2, metadata_vol);
++            let vol_string_len = vol_string.chars().count();
++            let metadata_vol_string = base64::encode(&vol_string);
++            let metadata_xml = format!("<item><type>73736e63</type><code>70766f6c</code><length>{}</length>\n<data encoding=\"base64\">\n{}</data></item>", vol_string_len, metadata_vol_string);
++
++            let mut f = File::create(path).expect("Unable to open pipe");
++            f.write_all(metadata_xml.as_bytes())
++                .expect("Unable to write data");
++        }
++    }
++    fn set_metadata_pipe(&mut self, metadata_pipe: Option<String>) {
++        self.pipe = metadata_pipe;
++    }
++}
+diff --git a/playback/src/player.rs b/playback/src/player.rs
+index 2dd8f3b..c8cabed 100644
+--- a/playback/src/player.rs
++++ b/playback/src/player.rs
+@@ -1,6 +1,7 @@
+ use byteorder::{LittleEndian, ReadBytesExt};
+ use futures;
+ use futures::{future, Async, Future, Poll, Stream};
++use base64;
+ use std;
+ use std::borrow::Cow;
+ use std::cmp::max;
+@@ -8,6 +9,8 @@ use std::io::{Read, Result, Seek, SeekFrom};
+ use std::mem;
+ use std::thread;
+ use std::time::{Duration, Instant};
++use std::fs::File;
++use std::io::Write;
+ 
+ use crate::config::{Bitrate, PlayerConfig};
+ use librespot_core::session::Session;
+@@ -22,7 +25,7 @@ use crate::audio::{
+     READ_AHEAD_DURING_PLAYBACK_ROUNDTRIPS, READ_AHEAD_DURING_PLAYBACK_SECONDS,
+ };
+ use crate::audio_backend::Sink;
+-use crate::metadata::{AudioItem, FileFormat};
++use crate::metadata::{FileFormat, Metadata, Track, Album, Artist, AudioItem};
+ use crate::mixer::AudioFilter;
+ 
+ const PRELOAD_NEXT_TRACK_BEFORE_END_DURATION_MS: u32 = 30000;
+@@ -44,6 +47,7 @@ struct PlayerInternal {
+     sink_running: bool,
+     audio_filter: Option<Box<dyn AudioFilter + Send>>,
+     event_senders: Vec<futures::sync::mpsc::UnboundedSender<PlayerEvent>>,
++    metadata_pipe: Option<String>,
+ }
+ 
+ enum PlayerCommand {
+@@ -213,6 +217,7 @@ impl Player {
+         config: PlayerConfig,
+         session: Session,
+         audio_filter: Option<Box<dyn AudioFilter + Send>>,
++        metadata_pipe: Option<String>,
+         sink_builder: F,
+     ) -> (Player, PlayerEventChannel)
+     where
+@@ -234,6 +239,7 @@ impl Player {
+                 sink: sink_builder(),
+                 sink_running: false,
+                 audio_filter: audio_filter,
++                metadata_pipe: metadata_pipe,
+                 event_senders: [event_sender].to_vec(),
+             };
+ 
+@@ -533,6 +539,7 @@ impl PlayerState {
+ struct PlayerTrackLoader {
+     session: Session,
+     config: PlayerConfig,
++    metadata_pipe: Option<String>,
+ }
+ 
+ impl PlayerTrackLoader {
+@@ -585,6 +592,40 @@ impl PlayerTrackLoader {
+ 
+         info!("Loading <{}> with Spotify URI <{}>", audio.name, audio.uri);
+ 
++        if let Some(path) = self.metadata_pipe.as_ref() {
++            let track = Track::get(&self.session, spotify_id).wait().unwrap();
++            let mut f = File::create(path).expect("Unable to open pipe");
++
++            // title
++            let title = track.name.clone();
++            let title_len = title.chars().count();
++            let title_string = base64::encode(&title);
++            let title_xml = format!("<item><type>636f7265</type><code>6d696e6d</code><length>{}</length>\n<data encoding=\"base64\">\n{}</data></item>", title_len, title_string);
++            f.write_all(title_xml.as_bytes()).expect("Unable to write title");
++
++            // album
++            let album = Album::get(&self.session, track.album).wait().unwrap();
++            let album_name = album.name.clone();
++            let album_name_len = album_name.chars().count();
++            let album_name_string = base64::encode(&album_name);
++            let album_name_xml = format!("<item><type>636f7265</type><code>6173616c</code><length>{}</length>\n<data encoding=\"base64\">\n{}</data></item>", album_name_len, album_name_string);
++            f.write_all(album_name_xml.as_bytes()).expect("Unable to write album");
++
++            // artist
++            let mut artists = String::new();
++            for id in &track.artists {
++                if artists != "" {
++                    artists.push_str(" & ");
++                }
++                let artist = Artist::get(&self.session, *id).wait().unwrap();
++                artists.push_str(&artist.name);
++            }
++            let artists_len = artists.chars().count();
++            let artists_string = base64::encode(&artists);
++            let artists_xml = format!("<item><type>636f7265</type><code>61736172</code><length>{}</length>\n<data encoding=\"base64\">\n{}</data></item>", artists_len, artists_string);
++            f.write_all(artists_xml.as_bytes()).expect("Unable to write artists");
++        }
++
+         let audio = match self.find_available_alternative(&audio) {
+             Some(audio) => audio,
+             None => {
+@@ -1468,6 +1509,7 @@ impl PlayerInternal {
+         let loader = PlayerTrackLoader {
+             session: self.session.clone(),
+             config: self.config.clone(),
++            metadata_pipe: self.metadata_pipe.clone(),
+         };
+ 
+         let (result_tx, result_rx) = futures::sync::oneshot::channel();
+diff --git a/src/main.rs b/src/main.rs
+index 2efd62b..e70f569 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -75,6 +75,7 @@ fn list_backends() {
+ struct Setup {
+     backend: fn(Option<String>) -> Box<dyn Sink>,
+     device: Option<String>,
++    metadata_pipe: Option<String>,
+ 
+     mixer: fn(Option<MixerConfig>) -> Box<dyn Mixer>,
+ 
+@@ -142,6 +143,7 @@ fn setup(args: &[String]) -> Setup {
+             "Alsa mixer card, e.g \"hw:0\" or similar from `aplay -l`. Defaults to 'default' ",
+             "MIXER_CARD",
+         )
++        .optopt("", "metadata-pipe", "Pipe to write metadata", "METADATA_PIPE")
+         .optopt(
+             "",
+             "mixer-index",
+@@ -226,6 +228,8 @@ fn setup(args: &[String]) -> Setup {
+         exit(0);
+     }
+ 
++    let metadata_pipe = matches.opt_str("metadata-pipe");
++
+     let mixer_name = matches.opt_str("mixer");
+     let mixer = mixer::find(mixer_name.as_ref()).expect("Invalid mixer");
+ 
+@@ -354,6 +358,7 @@ fn setup(args: &[String]) -> Setup {
+         connect_config: connect_config,
+         credentials: credentials,
+         device: device,
++        metadata_pipe: metadata_pipe,
+         enable_discovery: enable_discovery,
+         zeroconf_port: zeroconf_port,
+         mixer: mixer,
+@@ -369,6 +374,7 @@ struct Main {
+     connect_config: ConnectConfig,
+     backend: fn(Option<String>) -> Box<dyn Sink>,
+     device: Option<String>,
++    metadata_pipe: Option<String>,
+     mixer: fn(Option<MixerConfig>) -> Box<dyn Mixer>,
+     mixer_config: MixerConfig,
+     handle: Handle,
+@@ -398,6 +404,7 @@ impl Main {
+             connect_config: setup.connect_config,
+             backend: setup.backend,
+             device: setup.device,
++            metadata_pipe: setup.metadata_pipe,
+             mixer: setup.mixer,
+             mixer_config: setup.mixer_config,
+ 
+@@ -469,18 +476,17 @@ impl Future for Main {
+                 Ok(Async::Ready(session)) => {
+                     self.connect = Box::new(futures::future::empty());
+                     let mixer_config = self.mixer_config.clone();
+-                    let mixer = (self.mixer)(Some(mixer_config));
++                    let mut mixer = (self.mixer)(Some(mixer_config));
+                     let player_config = self.player_config.clone();
+                     let connect_config = self.connect_config.clone();
++                    let metadata_pipe = self.metadata_pipe.clone();
++
++                    mixer.set_metadata_pipe(metadata_pipe.clone());
+ 
+                     let audio_filter = mixer.get_audio_filter();
+                     let backend = self.backend;
+                     let device = self.device.clone();
+-                    let (player, event_channel) =
+-                        Player::new(player_config, session.clone(), audio_filter, move || {
+-                            (backend)(device)
+-                        });
+-
++                    let (player, event_channel) = Player::new(player_config, session.clone(), audio_filter, metadata_pipe, move || (backend)(device));
+                     let (spirc, spirc_task) = Spirc::new(connect_config, session, player, mixer);
+                     self.spirc = Some(spirc);
+                     self.spirc_task = Some(spirc_task);
