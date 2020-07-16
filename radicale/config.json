@@ -12,6 +12,7 @@
   "ingress_entry": "/",
   "startup": "application",
   "arch": [
+    "aarch64",
     "amd64",
     "armv7",
     "i386"
