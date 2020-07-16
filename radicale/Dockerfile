@@ -1,4 +1,4 @@
-ARG BUILD_FROM
+ARG BUILD_FROM=homeassistant/home-assistant:latest
 FROM $BUILD_FROM
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 
