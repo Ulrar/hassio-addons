@@ -1,4 +1,4 @@
-ARG BUILD_FROM=homeassistant/home-assistant:latest
+ARG BUILD_FROM
 FROM $BUILD_FROM
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 
@@ -12,6 +12,7 @@ RUN apk add --no-cache --virtual=build-dependencies \
         libffi-dev \
         musl-dev \
         python3-dev \
+        py-pip \
     && apk add --no-cache \
         wget \
         curl \
