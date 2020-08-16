@@ -1,21 +1,41 @@
 diff --git a/Cargo.lock b/Cargo.lock
-index e2ad888..207e887 100644
+index 9c9c2f6..e5019d0 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -904,6 +904,7 @@ name = "librespot-playback"
- version = "0.1.1"
+@@ -1045,6 +1045,7 @@ dependencies = [
+ name = "librespot-metadata"
+ version = "0.1.3"
+ dependencies = [
++ "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+  "byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+  "librespot-core 0.1.3",
+@@ -1059,6 +1060,7 @@ name = "librespot-playback"
+ version = "0.1.3"
  dependencies = [
   "alsa 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 + "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
-  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+  "byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
   "cpal 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
-  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
+  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+diff --git a/metadata/Cargo.toml b/metadata/Cargo.toml
+index a4ca257..2c79059 100644
+--- a/metadata/Cargo.toml
++++ b/metadata/Cargo.toml
+@@ -7,6 +7,7 @@ license="MIT"
+ edition = "2018"
+ 
+ [dependencies]
++base64 = "0.10"
+ byteorder = "1.3"
+ futures = "0.1"
+ linear-map = "1.2"
 diff --git a/playback/Cargo.toml b/playback/Cargo.toml
-index c0986c4..8d8186f 100644
+index 699a3f5..d7eb2cd 100644
 --- a/playback/Cargo.toml
 +++ b/playback/Cargo.toml
 @@ -17,6 +17,7 @@ path = "../metadata"
- version = "0.1.1"
+ version = "0.1.3"
  
  [dependencies]
 +base64 = "0.10"
@@ -23,7 +43,7 @@ index c0986c4..8d8186f 100644
  log = "0.4"
  byteorder = "1.3"
 diff --git a/playback/src/lib.rs b/playback/src/lib.rs
-index fe00aaa..0646487 100644
+index e2a2ac8..c089ddb 100644
 --- a/playback/src/lib.rs
 +++ b/playback/src/lib.rs
 @@ -4,6 +4,7 @@ extern crate log;
@@ -35,7 +55,7 @@ index fe00aaa..0646487 100644
  #[cfg(feature = "alsa-backend")]
  extern crate alsa;
 diff --git a/playback/src/mixer/mod.rs b/playback/src/mixer/mod.rs
-index 4fc01b5..53ae382 100644
+index 325c1e1..3bad013 100644
 --- a/playback/src/mixer/mod.rs
 +++ b/playback/src/mixer/mod.rs
 @@ -9,6 +9,7 @@ pub trait Mixer: Send {
@@ -46,7 +66,7 @@ index 4fc01b5..53ae382 100644
  }
  
  pub trait AudioFilter {
-@@ -40,6 +41,9 @@ impl Default for MixerConfig {
+@@ -42,6 +43,9 @@ impl Default for MixerConfig {
  pub mod softmixer;
  use self::softmixer::SoftMixer;
  
@@ -56,7 +76,7 @@ index 4fc01b5..53ae382 100644
  fn mk_sink<M: Mixer + 'static>(device: Option<MixerConfig>) -> Box<dyn Mixer> {
      Box::new(M::open(device))
  }
-@@ -47,6 +51,7 @@ fn mk_sink<M: Mixer + 'static>(device: Option<MixerConfig>) -> Box<dyn Mixer> {
+@@ -49,6 +53,7 @@ fn mk_sink<M: Mixer + 'static>(device: Option<MixerConfig>) -> Box<dyn Mixer> {
  pub fn find<T: AsRef<str>>(name: Option<T>) -> Option<fn(Option<MixerConfig>) -> Box<dyn Mixer>> {
      match name.as_ref().map(AsRef::as_ref) {
          None | Some("softvol") => Some(mk_sink::<SoftMixer>),
@@ -127,7 +147,7 @@ index 0000000..5d1bd72
 +    }
 +}
 diff --git a/playback/src/player.rs b/playback/src/player.rs
-index 2dd8f3b..c8cabed 100644
+index 404493f..86a83e2 100644
 --- a/playback/src/player.rs
 +++ b/playback/src/player.rs
 @@ -1,6 +1,7 @@
@@ -156,15 +176,15 @@ index 2dd8f3b..c8cabed 100644
  use crate::mixer::AudioFilter;
  
  const PRELOAD_NEXT_TRACK_BEFORE_END_DURATION_MS: u32 = 30000;
-@@ -44,6 +47,7 @@ struct PlayerInternal {
-     sink_running: bool,
+@@ -54,6 +57,7 @@ struct PlayerInternal {
+     sink_event_callback: Option<SinkEventCallback>,
      audio_filter: Option<Box<dyn AudioFilter + Send>>,
      event_senders: Vec<futures::sync::mpsc::UnboundedSender<PlayerEvent>>,
 +    metadata_pipe: Option<String>,
  }
  
  enum PlayerCommand {
-@@ -213,6 +217,7 @@ impl Player {
+@@ -232,6 +236,7 @@ impl Player {
          config: PlayerConfig,
          session: Session,
          audio_filter: Option<Box<dyn AudioFilter + Send>>,
@@ -172,15 +192,15 @@ index 2dd8f3b..c8cabed 100644
          sink_builder: F,
      ) -> (Player, PlayerEventChannel)
      where
-@@ -234,6 +239,7 @@ impl Player {
-                 sink: sink_builder(),
-                 sink_running: false,
+@@ -254,6 +259,7 @@ impl Player {
+                 sink_status: SinkStatus::Closed,
+                 sink_event_callback: None,
                  audio_filter: audio_filter,
 +                metadata_pipe: metadata_pipe,
                  event_senders: [event_sender].to_vec(),
              };
  
-@@ -533,6 +539,7 @@ impl PlayerState {
+@@ -566,6 +572,7 @@ impl PlayerState {
  struct PlayerTrackLoader {
      session: Session,
      config: PlayerConfig,
@@ -188,7 +208,7 @@ index 2dd8f3b..c8cabed 100644
  }
  
  impl PlayerTrackLoader {
-@@ -585,6 +592,40 @@ impl PlayerTrackLoader {
+@@ -618,6 +625,40 @@ impl PlayerTrackLoader {
  
          info!("Loading <{}> with Spotify URI <{}>", audio.name, audio.uri);
  
@@ -229,7 +249,7 @@ index 2dd8f3b..c8cabed 100644
          let audio = match self.find_available_alternative(&audio) {
              Some(audio) => audio,
              None => {
-@@ -1468,6 +1509,7 @@ impl PlayerInternal {
+@@ -1541,6 +1582,7 @@ impl PlayerInternal {
          let loader = PlayerTrackLoader {
              session: self.session.clone(),
              config: self.config.clone(),
@@ -238,7 +258,7 @@ index 2dd8f3b..c8cabed 100644
  
          let (result_tx, result_rx) = futures::sync::oneshot::channel();
 diff --git a/src/main.rs b/src/main.rs
-index 2efd62b..e70f569 100644
+index 7803a9f..ed38a07 100644
 --- a/src/main.rs
 +++ b/src/main.rs
 @@ -75,6 +75,7 @@ fn list_backends() {
@@ -249,7 +269,7 @@ index 2efd62b..e70f569 100644
  
      mixer: fn(Option<MixerConfig>) -> Box<dyn Mixer>,
  
-@@ -142,6 +143,7 @@ fn setup(args: &[String]) -> Setup {
+@@ -144,6 +145,7 @@ fn setup(args: &[String]) -> Setup {
              "Alsa mixer card, e.g \"hw:0\" or similar from `aplay -l`. Defaults to 'default' ",
              "MIXER_CARD",
          )
@@ -257,7 +277,7 @@ index 2efd62b..e70f569 100644
          .optopt(
              "",
              "mixer-index",
-@@ -226,6 +228,8 @@ fn setup(args: &[String]) -> Setup {
+@@ -234,6 +236,8 @@ fn setup(args: &[String]) -> Setup {
          exit(0);
      }
  
@@ -266,7 +286,7 @@ index 2efd62b..e70f569 100644
      let mixer_name = matches.opt_str("mixer");
      let mixer = mixer::find(mixer_name.as_ref()).expect("Invalid mixer");
  
-@@ -354,6 +358,7 @@ fn setup(args: &[String]) -> Setup {
+@@ -369,6 +373,7 @@ fn setup(args: &[String]) -> Setup {
          connect_config: connect_config,
          credentials: credentials,
          device: device,
@@ -274,7 +294,7 @@ index 2efd62b..e70f569 100644
          enable_discovery: enable_discovery,
          zeroconf_port: zeroconf_port,
          mixer: mixer,
-@@ -369,6 +374,7 @@ struct Main {
+@@ -385,6 +390,7 @@ struct Main {
      connect_config: ConnectConfig,
      backend: fn(Option<String>) -> Box<dyn Sink>,
      device: Option<String>,
@@ -282,7 +302,7 @@ index 2efd62b..e70f569 100644
      mixer: fn(Option<MixerConfig>) -> Box<dyn Mixer>,
      mixer_config: MixerConfig,
      handle: Handle,
-@@ -398,6 +404,7 @@ impl Main {
+@@ -415,6 +421,7 @@ impl Main {
              connect_config: setup.connect_config,
              backend: setup.backend,
              device: setup.device,
@@ -290,7 +310,7 @@ index 2efd62b..e70f569 100644
              mixer: setup.mixer,
              mixer_config: setup.mixer_config,
  
-@@ -469,18 +476,17 @@ impl Future for Main {
+@@ -487,17 +494,17 @@ impl Future for Main {
                  Ok(Async::Ready(session)) => {
                      self.connect = Box::new(futures::future::empty());
                      let mixer_config = self.mixer_config.clone();
@@ -309,8 +329,7 @@ index 2efd62b..e70f569 100644
 -                        Player::new(player_config, session.clone(), audio_filter, move || {
 -                            (backend)(device)
 -                        });
--
 +                    let (player, event_channel) = Player::new(player_config, session.clone(), audio_filter, metadata_pipe, move || (backend)(device));
-                     let (spirc, spirc_task) = Spirc::new(connect_config, session, player, mixer);
-                     self.spirc = Some(spirc);
-                     self.spirc_task = Some(spirc_task);
+ 
+                     if self.emit_sink_events {
+                         if let Some(player_event_program) = &self.player_event_program {
