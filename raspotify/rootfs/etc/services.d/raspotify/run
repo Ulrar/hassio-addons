@@ -55,7 +55,7 @@ fi
 if bashio::config.equals 'volume_normalisation' true; then
 	OPTIONS='--enable-volume-normalisation '"${OPTIONS}"
 fi
-OPTIONS='--linear-volume --initial-volume=100 '"${OPTIONS}"
+OPTIONS='--mixer-linear-volume --initial-volume=100 '"${OPTIONS}"
 
 if bashio::config.equals 'log_level' 'debug'; then
 	OPTIONS='--verbose '"${OPTIONS}"
