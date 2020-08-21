@@ -33,7 +33,7 @@ WORKDIR /tmp/librespot
 
 RUN cargo build --release --no-default-features --features alsa-backend
 RUN cp -v /usr/src/build/release/librespot /usr/bin
-RUN ${BUILD_ARCH}-linux-gnu-strip /usr/bin/librespot
+RUN if [ "${BUILD_ARCH}" == "armv7" ]; then arm-linux-gnu-strip /usr/bin/librespot; true; else ${BUILD_ARCH}-linux-gnu-strip /usr/bin/librespot; true; fi
 
 FROM base AS runner
 ARG BUILD_ARCH
