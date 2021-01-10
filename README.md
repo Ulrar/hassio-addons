@@ -9,6 +9,8 @@ if you have any issues you can access the web interface on port 3689.
 
 Note that Spotify support is not available on `aarch64`.
 
+Note that the avahi-daemon addon is required if you're using the latest versions of Hassos.
+
 # Raspotify
 
 Spotify connect server, see [the github page](https://github.com/dtcooper/raspotify) for more info.
@@ -24,6 +26,11 @@ device: /share/forked-daapd/music/Raspotify
 in the add-on configuration.
 
 [Read the full add-on documentation](raspotify/DOCS.md).
+
+# Avahi-Daemon
+
+The newer versions of Hassos have moved form avahi to systemd-resolved, which is not compatible with forked-daapd.
+This addon should allow forked-daapd, and any other addon that depends on avahi, to work.
 
 # Radicale
 

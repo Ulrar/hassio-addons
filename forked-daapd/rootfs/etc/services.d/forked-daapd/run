@@ -7,4 +7,4 @@
 
 bashio::log.info 'Starting the forked-daapd Server...'
 # Run forked-daapd
-exec forked-daapd -f -c /share/forked-daapd/forked-daapd.conf -P /var/run/forked-daapd.pid --mdns-no-rsp --mdns-no-daap --mdns-no-cname --mdns-no-web
+exec forked-daapd -f -c /share/forked-daapd/forked-daapd.conf -P /var/run/forked-daapd.pid

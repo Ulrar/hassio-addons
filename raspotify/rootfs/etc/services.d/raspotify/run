@@ -1,6 +1,5 @@
 #!/usr/bin/with-contenv bashio
 # ==============================================================================
-# JPD Hass.io Add-ons: raspotify server
 # Runs the raspotify Server
 # ==============================================================================
 # shellcheck disable=SC1091

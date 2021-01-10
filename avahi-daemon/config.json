@@ -1,0 +1,31 @@
+{
+  "name": "Avahi Daemon",
+  "version": "dev",
+  "slug": "avahi-daemon",
+  "panel_icon": "mdi:access-point",
+  "description": "Avahi Daemon needed by forked-daapd",
+  "url": "https://github.com/Ulrar/hassio-addons",
+  "stage": "experimental",
+  "ingress": false,
+  "startup": "application",
+  "arch": [
+    "aarch64",
+    "armv7",
+    "amd64",
+    "i386"
+  ],
+  "boot": "auto",
+  "apparmor": true,
+  "hassio_api": false,
+  "auth_api": false,
+  "hassio_role": "default",
+  "audio": false,
+  "host_network": true,
+  "host_dbus": true,
+  "host_ipc": false,
+  "ports": {},
+  "ports_description": {},
+  "map": [],
+  "options": {},
+  "schema": {}
+}
