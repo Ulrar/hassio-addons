@@ -22,7 +22,7 @@
   "auth_api": true,
   "hassio_role": "default",
   "audio": true,
-  "host_network": false,
+  "host_network": true,
   "host_dbus": true,
   "host_ipc": false,
   "ports": {

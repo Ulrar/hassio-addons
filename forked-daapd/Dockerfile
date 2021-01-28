@@ -62,7 +62,8 @@ ENV RUN_DEPS \
     libswscale5 \
     libunistring2 \
     libwebsockets8 \
-    zlib1g
+    zlib1g \
+    avahi-daemon
 ENV RUN_DEPS_NO_AARCH64 \
     libspotify-dev \
     libspotify12

@@ -1,9 +1,0 @@
-#!/usr/bin/with-contenv bashio
-# ==============================================================================
-# avahi-daemon
-# ==============================================================================
-# shellcheck disable=SC1091
-
-# Run avahi-daemon
-bashio::log.info 'Starting the avahi daemon...'
-exec /usr/sbin/avahi-daemon
