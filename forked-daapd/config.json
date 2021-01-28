@@ -23,7 +23,7 @@
   "hassio_role": "default",
   "audio": true,
   "host_network": true,
-  "host_dbus": true,
+  "host_dbus": false,
   "host_ipc": false,
   "ports": {
     "3688/tcp": 3688,
